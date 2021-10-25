@@ -14,6 +14,7 @@ class Study():
 		self.descriptions = None
 
 	def process_study(self):
+		return None
 
 	def set_series_descriptions(self):
 		descriptions = {}
