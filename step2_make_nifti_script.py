@@ -1,0 +1,32 @@
+DESCRIPTION = "script to process all of the nifti files"
+
+import argparse
+import os
+from imagetool.study import Study
+from glob import glob
+
+
+if __name__ == "__main__": 
+
+	parser = argparse.ArgumentParser(description=DESCRIPTION)
+	mode = parser.add_mutually_exclusive_group()
+	mode.add_argument("--studies-path", '-sp', dest='path',
+		default=None, help="full path to directory containing dicom studies")
+
+	args = parser.parse_args()
+	path = args.path
+
+	assert os.path.isdir(path), "Provided field for studies path is not directory"
+
+	#get list of patient folders
+	pts = os.listdir(path)
+
+	#loop through folders, processing mri and ct studies
+	for pt in pts:
+		study_obj_files = glob(os.path.join(path, pt, '*.pickle'))
+		for study_obj_path in study_obj_files:
+			s = Study()
+			s.load_object(study_obj_path)
+			series_names_ = s.get_series_names()
+			for series_ in series_names_:
+				s.convert_series_to_nifti(series_)
