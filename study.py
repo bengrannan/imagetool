@@ -5,7 +5,7 @@ from glob import glob
 import pydicom
 import numpy as np
 import shutil
-import dicom2nifti
+from nipype.interfaces.dcm2nii import Dcm2niix
 import pickle
 
 
@@ -75,24 +75,21 @@ class Study():
 		if output_path is None:
 			output_path = os.path.split(self.path)[0]
 		if output_file is None:
-			output_file = series_description+'.nii'
+			out_name = series_description.replace('.','')
+			out_name = out_name.replace(' ','')
+			os.mkdir(os.path.join(output_path, out_name))
 		if os.path.isdir(tmp_path):
 			assert len(os.path.listdir(tmp_path)) == 0, "Tmp folder should be empty"
 		else:
 			os.mkdir(tmp_path)
 		for f in self.seriesDescriptions[series_description]:
 			shutil.copy(f, tmp_path)
-		try:
-			dicom2nifti.dicom_series_to_nifti(tmp_path, os.path.join(output_path, output_file))
-		except dicom2nifti.exceptions.ConversionValidationError:
-			print('dicom2nifti.ConversionValidationError for series: {}'.format(series_description))
-			shutil.rmtree(tmp_path)
-			return 
-		except IndexError:
-			print('dicom2nifti IndexError for series: {}'.format(series_description))
-			shutil.rmtree(tmp_path)
-			return
-		print('File: {} created.'.format(os.path.join(output_path, output_file)))
+		converter = Dcm2niix()
+		converter.inputs.source_dir = tmp_path
+		converter.inputs.output_dir = os.path.join(output_path, out_name)
+		converter.cmdline
+		converter.run() 
+		shutil.rmtree(tmp_path)
 
 	def save_object(self, path):
 		with open(path, 'wb') as f:
@@ -105,6 +102,12 @@ class Study():
 		for attr in vars(obj):
 			setattr(self, attr, getattr(obj, attr))
 		print('Opened object from file {}'.format(path))
+
+	def copy_series_dcm_to_directory(self, series_description, newDir):
+		assert series_description in self.get_series_names(), "The series specified does not match a series description"
+		assert os.path.isdir(newDir) is False, "newDir already exists"
+		for f in self.seriesDescriptions[series_description]:
+			shutil.copy(f, newDir)
 
 	def _set_path(self, path):
 		assert os.path.isdir(path), "Specified path is not a directory"
