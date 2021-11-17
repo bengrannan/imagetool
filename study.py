@@ -69,27 +69,25 @@ class Study():
 			self.set_series_descriptions()
 		return set(list(self.seriesDescriptions.keys()))
 
-	def convert_series_to_nifti(self, series_description, output_path=None, output_file=None):
+	def convert_series_to_nifti(self, series_description, output_path=None):
 		assert series_description in self.get_series_names(), "The series specified does not match a series description"
-		tmp_path = os.path.join(os.path.split(self.path)[0], 'tmp')
+		# set nifti path	
+		nifti_path = os.path.join(os.path.split(self.path)[0], 'nifti_'+os.path.split(self.path)[1])
+		if not os.path.isdir(nifti_path):
+			os.mkdir(nifti_path)
+		# set output path
 		if output_path is None:
-			output_path = os.path.split(self.path)[0]
-		if output_file is None:
 			out_name = series_description.replace('.','')
 			out_name = out_name.replace(' ','')
-			os.mkdir(os.path.join(output_path, out_name))
-		if os.path.isdir(tmp_path):
-			assert len(os.path.listdir(tmp_path)) == 0, "Tmp folder should be empty"
-		else:
-			os.mkdir(tmp_path)
-		for f in self.seriesDescriptions[series_description]:
-			shutil.copy(f, tmp_path)
+			output_path = os.path.join(nifti_path, out_name)
+		if not os.path.isdir(output_path):
+			os.mkdir(output_path)
+		# convert dicom
 		converter = Dcm2niix()
-		converter.inputs.source_dir = tmp_path
-		converter.inputs.output_dir = os.path.join(output_path, out_name)
-		converter.cmdline
+		converter.inputs.source_names = self.seriesDescriptions[series_description]
+		converter.inputs.compress = 'n'
+		converter.inputs.output_dir = output_path
 		converter.run() 
-		shutil.rmtree(tmp_path)
 
 	def save_object(self, path):
 		with open(path, 'wb') as f:
