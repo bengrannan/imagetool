@@ -78,10 +78,9 @@ class Study():
 			out_name = series_description.replace('.','')
 			out_name = out_name.replace(' ','')
 			os.mkdir(os.path.join(output_path, out_name))
-		if os.path.isdir(tmp_path):
-			assert len(os.path.listdir(tmp_path)) == 0, "Tmp folder should be empty"
-		else:
-			os.mkdir(tmp_path)
+		if os.path.isdir(tmp_path) and len(os.listdir(tmp_path)) > 0:
+			shutil.rmtree(tmp_path)
+		os.mkdir(tmp_path)
 		for f in self.seriesDescriptions[series_description]:
 			shutil.copy(f, tmp_path)
 		converter = Dcm2niix()
