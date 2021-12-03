@@ -20,7 +20,7 @@ class Study():
 			self.path = None
 			self.dcm_files = None
 		self.metadata = None
-		self.seriesDescriptions = None
+		self.seriesIdentifiers = None
 
 	def process_study(self):
 		return None
@@ -62,32 +62,36 @@ class Study():
 			metadata[f] = meta_
 			print('\r{}% complete'.format(np.round(n/len(self.dcm_files)*100,2)), end='')
 		self.metadata = metadata
-		self._set_series_names()
+		self._set_series_identifiers()
 
-	def get_series_names(self):
-		if self.seriesDescriptions is None:
-			self.set_series_descriptions()
-		return set(list(self.seriesDescriptions.keys()))
+	def get_series_identifiers(self):
+		if self.seriesIdentifiers is None:
+			self.set_series_identifiers()
+		return set(list(self.seriesIdentifiers.keys()))
 
-	def convert_series_to_nifti(self, series_description, output_path=None):
-		assert series_description in self.get_series_names(), "The series specified does not match a series description"
+	def convert_series_to_nifti(self, series_identifier, output_path=None):
+		assert series_identifier in self.get_series_identifiers(), "The identifier specified does not match \
+			a series (seriesDescription, seriesNumber) tuple"
 		# set nifti path	
 		nifti_path = os.path.join(os.path.split(self.path)[0], 'nifti_'+os.path.split(self.path)[1])
 		if not os.path.isdir(nifti_path):
 			os.mkdir(nifti_path)
 		# set output path
 		if output_path is None:
-			out_name = series_description.replace('.','')
+			out_name = series_identifier[0].replace('.','')+'_'+str(series_identifier[1])
 			out_name = out_name.replace(' ','')
 			output_path = os.path.join(nifti_path, out_name)
 		if not os.path.isdir(output_path):
 			os.mkdir(output_path)
 		# convert dicom
 		converter = Dcm2niix()
-		converter.inputs.source_names = self.seriesDescriptions[series_description]
+		converter.inputs.source_names = self.seriesIdentifiers[series_identifier]
 		converter.inputs.compress = 'n'
 		converter.inputs.output_dir = output_path
-		converter.run() 
+		try:
+			converter.run()
+		except RuntimeError:
+			print('\nRuntimeError for {}... skipping.\n'.format(series_identifier)) 
 
 	def save_object(self, path):
 		with open(path, 'wb') as f:
@@ -123,15 +127,17 @@ class Study():
 		# creates list of dicom files
 		self.dcm_files = glob(os.path.join(self.path, "*/*"))
 
-	def _set_series_names(self):
+	def _set_series_identifiers(self):
 		series = {}
 		for f, meta_ in self.metadata.items():
 			seriesDescription_ = meta_['SeriesDescription']
-			if seriesDescription_ not in series.keys():
-				series[seriesDescription_] = [f]
+			seriesNumber_ = meta_['SeriesNumber']
+			identifier_ = (seriesDescription_, seriesNumber_)
+			if identifier_ not in series.keys():
+				series[identifier_] = [f]
 			else:
-				series[seriesDescription_].append(f)
-		self.seriesDescriptions = series
+				series[identifier_].append(f)
+		self.seriesIdentifiers = series
 
 
 
